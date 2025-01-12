@@ -59,6 +59,7 @@ configure_ssh() {
     cat > "$CONFIG_FILE" << EOF
 # Added by setup script $(date +'%Y-%m-%d %H:%M:%S')
 Port 22088
+PermitRootLogin yes
 PasswordAuthentication yes
 EOF
     
