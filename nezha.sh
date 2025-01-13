@@ -24,9 +24,12 @@ fi
 # 备份原配置文件
 cp "$SERVICE_FILE" "${SERVICE_FILE}.backup.$(date +%Y%m%d%H%M%S)"
 
-# 获取当前的服务器地址和密码
-current_server=$(grep "ExecStart" "$SERVICE_FILE" | grep -o '\-s[[:space:]]*[^[:space:]]*' | cut -d' ' -f2 | tr -d '"')
-current_password=$(grep "ExecStart" "$SERVICE_FILE" | grep -o '\-p[[:space:]]*[^[:space:]]*' | cut -d' ' -f2 | tr -d '"')
+# 改进参数提取方式
+current_server=$(grep "ExecStart" "$SERVICE_FILE" | grep -o '"-s"[[:space:]]*"[^"]*"' | cut -d'"' -f4)
+current_password=$(grep "ExecStart" "$SERVICE_FILE" | grep -o '"-p"[[:space:]]*"[^"]*"' | cut -d'"' -f4)
+
+echo "检测到的服务器地址: $current_server"
+echo "检测到的密码: $current_password"
 
 if [ -z "$current_server" ] || [ -z "$current_password" ]; then
     echo "无法从现有配置中获取服务器地址或密码"
