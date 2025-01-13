@@ -25,15 +25,15 @@ fi
 cp "$SERVICE_FILE" "${SERVICE_FILE}.backup.$(date +%Y%m%d%H%M%S)"
 
 # 获取当前的服务器地址和密码
-current_server=$(grep "ExecStart" "$SERVICE_FILE" | grep -o '\-s [^ ]*' | cut -d' ' -f2)
-current_password=$(grep "ExecStart" "$SERVICE_FILE" | grep -o '\-p [^ ]*' | cut -d' ' -f2)
+current_server=$(grep "ExecStart" "$SERVICE_FILE" | grep -o '\-s[[:space:]]*[^[:space:]]*' | cut -d' ' -f2 | tr -d '"')
+current_password=$(grep "ExecStart" "$SERVICE_FILE" | grep -o '\-p[[:space:]]*[^[:space:]]*' | cut -d' ' -f2 | tr -d '"')
 
 if [ -z "$current_server" ] || [ -z "$current_password" ]; then
     echo "无法从现有配置中获取服务器地址或密码"
     exit 1
 fi
 
-# 创建新的配置
+# 创建新的配置，保持原有的其他设置
 cat > "$SERVICE_FILE" << EOF
 [Unit]
 Description=哪吒探针监控端
@@ -42,16 +42,14 @@ ConditionFileIsExecutable=/opt/nezha/agent/nezha-agent
 [Service]
 StartLimitInterval=5
 StartLimitBurst=10
-ExecStart=/opt/nezha/agent/nezha-agent "-s" ${current_server} "-p" ${current_password} --disable-auto-update --disable-force-update --disable-command-execute
-
+ExecStart=/opt/nezha/agent/nezha-agent "-s" "${current_server}" "-p" "${current_password}" --disable-auto-update --disable-force-update --disable-command-execute --report-delay 3
 WorkingDirectory=/root
-
 Restart=always
-
 RestartSec=120
 EnvironmentFile=-/etc/sysconfig/nezha-agent
 
-
+[Install]
+WantedBy=multi-user.target
 EOF
 
 echo "配置文件已更新"
