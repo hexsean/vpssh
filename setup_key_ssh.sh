@@ -54,15 +54,17 @@ cmd() {
 
 # 获取用户输入
 get_input() {
-    echo -e "${BOLD}${YELLOW}$1${NC}"
-    if [ -t 0 ]; then
-        # 有TTY，读取输入
-        read choice </dev/tty
-    else
-        # 无TTY，使用默认值
-        choice="n"
-        echo "自动选择: $choice (非交互模式)"
-    fi
+    # 使用标准错误输出确保提示信息显示
+    echo -e "\n${BOLD}${RED}▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼${NC}" >&2
+    echo -e "${BOLD}${RED}需要用户输入${NC}" >&2
+    echo -e "${BOLD}${YELLOW}$1${NC}" >&2
+    echo -e "${BOLD}${RED}▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲${NC}" >&2
+
+    # 强制刷新输出
+    sleep 0.1
+
+    # 从/dev/tty读取
+    read choice </dev/tty
     echo "$choice"
 }
 
