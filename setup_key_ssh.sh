@@ -55,7 +55,8 @@ cmd() {
 # 获取用户输入
 get_input() {
     echo -e "${BOLD}${YELLOW}$1${NC}"
-    read choice
+    # 从/dev/tty而不是标准输入读取
+    read choice </dev/tty
     echo "$choice"
 }
 
