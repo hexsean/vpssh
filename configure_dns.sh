@@ -93,7 +93,7 @@ check_dns_system() {
 
     # 检测云环境
     print_subheader "检测云环境..."
-    if curl -s http://100.100.100.200/latest/meta-data/ &>/dev/null; then
+    if curl -s --connect-timeout 2 --max-time 3 http://100.100.100.200/latest/meta-data/ &>/dev/null; then
         print_info "- 检测到阿里云环境"
         CLOUD_ENV="alicloud"
         # 获取区域信息
@@ -101,7 +101,7 @@ check_dns_system() {
         if [ -n "$REGION" ]; then
             print_info "- 阿里云区域: ${BOLD}$REGION${NC}"
         fi
-    elif curl -s http://169.254.169.254/latest/meta-data/ &>/dev/null; then
+    elif curl -s --connect-timeout 2 --max-time 3 http://169.254.169.254/latest/meta-data/ &>/dev/null; then
         print_info "- 检测到AWS或类似云环境"
         CLOUD_ENV="aws"
     else

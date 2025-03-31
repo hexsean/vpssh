@@ -56,7 +56,6 @@ cmd() {
 get_input() {
     # 使用标准错误输出确保提示信息显示
     echo -e "\n${BOLD}${RED}▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼${NC}" >&2
-    echo -e "${BOLD}${RED}需要用户输入${NC}" >&2
     echo -e "${BOLD}${YELLOW}$1${NC}" >&2
     echo -e "${BOLD}${RED}▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲${NC}" >&2
 
