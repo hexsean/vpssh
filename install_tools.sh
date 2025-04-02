@@ -89,7 +89,7 @@ fi
 
 # 验证安装
 print_header "验证安装"
-TOOLS=("curl" "wget" "vim" "dig")
+TOOLS=("curl" "wget" "vim" "dig" "sudo")
 for tool in "${TOOLS[@]}"; do
     if command -v $tool &> /dev/null; then
         print_success "$tool 已成功安装"
