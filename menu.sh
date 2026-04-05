@@ -65,24 +65,20 @@ show_menu() {
 # ---- 下载并执行脚本 ----
 run_script() {
     local script_file="$1"
+    trap 'rm -f /tmp/vpssh-common.sh "/tmp/vpssh-${script_file}"' RETURN
 
-    echo -e "\n${CYAN}---> 下载 lib/common.sh ...${NC}"
-    if ! curl -fsSL "${REPO_RAW}/lib/common.sh" -o /tmp/vpssh-common.sh; then
-        echo -e "${RED}下载 common.sh 失败${NC}"
-        return 1
-    fi
+    echo -e "\n${CYAN}---> 下载脚本...${NC}"
+    curl -fsSL "${REPO_RAW}/lib/common.sh" -o /tmp/vpssh-common.sh &
+    curl -fsSL "${REPO_RAW}/scripts/${script_file}" -o "/tmp/vpssh-${script_file}" &
+    wait
 
-    echo -e "${CYAN}---> 下载 scripts/${script_file} ...${NC}"
-    if ! curl -fsSL "${REPO_RAW}/scripts/${script_file}" -o "/tmp/vpssh-${script_file}"; then
-        echo -e "${RED}下载 ${script_file} 失败${NC}"
+    if [[ ! -s /tmp/vpssh-common.sh ]] || [[ ! -s "/tmp/vpssh-${script_file}" ]]; then
+        echo -e "${RED}下载失败${NC}"
         return 1
     fi
 
     echo -e "${CYAN}---> 执行 ${script_file} ...${NC}\n"
     bash "/tmp/vpssh-${script_file}"
-
-    # 清理
-    rm -f "/tmp/vpssh-${script_file}" /tmp/vpssh-common.sh
 }
 
 # ---- 主循环 ----

@@ -52,10 +52,10 @@ detect_dns_system() {
     fi
 
     # 云环境
-    if curl -s --connect-timeout 2 --max-time 3 http://100.100.100.200/latest/meta-data/ &>/dev/null; then
+    if curl -s --connect-timeout 1 --max-time 1 http://100.100.100.200/latest/meta-data/ &>/dev/null; then
         CLOUD_ENV="alicloud"
         print_ok "检测到阿里云环境"
-    elif curl -s --connect-timeout 2 --max-time 3 http://169.254.169.254/latest/meta-data/ &>/dev/null; then
+    elif curl -s --connect-timeout 1 --max-time 1 http://169.254.169.254/latest/meta-data/ &>/dev/null; then
         CLOUD_ENV="aws"
         print_ok "检测到 AWS 环境"
     else
@@ -101,7 +101,12 @@ test_dns_resolution() {
     done
 }
 
-# ---- 选择 DNS ----
+read_custom_dns() {
+    read -r -p "主 DNS: " PRIMARY_DNS </dev/tty
+    read -r -p "辅助 DNS: " SECONDARY_DNS </dev/tty
+    DNS_PROVIDER="自定义"
+}
+
 select_dns() {
     print_header "选择 DNS 服务器"
     while true; do
@@ -124,16 +129,12 @@ select_dns() {
                 if [[ "${CLOUD_ENV}" == "alicloud" ]]; then
                     PRIMARY_DNS="100.100.2.136"; SECONDARY_DNS="100.100.2.138"; DNS_PROVIDER="阿里云内网"; return
                 else
-                    read -r -p "主 DNS: " PRIMARY_DNS </dev/tty
-                    read -r -p "辅助 DNS: " SECONDARY_DNS </dev/tty
-                    DNS_PROVIDER="自定义"; return
+                    read_custom_dns; return
                 fi
                 ;;
             4)
                 if [[ "${CLOUD_ENV}" == "alicloud" ]]; then
-                    read -r -p "主 DNS: " PRIMARY_DNS </dev/tty
-                    read -r -p "辅助 DNS: " SECONDARY_DNS </dev/tty
-                    DNS_PROVIDER="自定义"; return
+                    read_custom_dns; return
                 else
                     print_err "无效选项"
                 fi

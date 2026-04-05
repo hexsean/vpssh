@@ -128,8 +128,7 @@ execute_plan() {
                 ;;
             write_zshrc)
                 print_step "写入 .zshrc..."
-                echo "${ZSHRC_CONTENT}" > "${ZSHRC}"
-                print_ok ".zshrc 已更新"
+                write_file_if_changed "${ZSHRC}" "${ZSHRC_CONTENT}"
                 ;;
         esac
     done

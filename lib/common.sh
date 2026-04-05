@@ -63,24 +63,16 @@ confirm() {
 
 # ---- 幂等工具 ----
 
-# 检查命令是否存在
 has_cmd() {
     command -v "$1" &>/dev/null
 }
 
-# 检查 apt 包是否已安装
-is_pkg_installed() {
-    dpkg -l "$1" 2>/dev/null | grep -q "^ii"
-}
-
-# 检查文件内容是否匹配（幂等写入）
 file_matches() {
     local file="$1"
     local content="$2"
     [[ -f "${file}" ]] && [[ "$(cat "${file}")" == "${content}" ]]
 }
 
-# 安全写入文件（仅在内容不同时写入）
 write_file_if_changed() {
     local file="$1"
     local content="$2"
@@ -94,20 +86,9 @@ write_file_if_changed() {
     return 0
 }
 
-# 确保以 root 运行
 require_root() {
     if [[ "$(id -u)" -ne 0 ]]; then
         print_err "此脚本需要 root 权限，请使用 sudo 运行"
         exit 1
     fi
-}
-
-# 显示脚本元信息
-show_meta() {
-    local script="$1"
-    local name description category
-    name=$(grep '^# @name:' "${script}" | head -1 | sed 's/^# @name: *//')
-    description=$(grep '^# @description:' "${script}" | head -1 | sed 's/^# @description: *//')
-    category=$(grep '^# @category:' "${script}" | head -1 | sed 's/^# @category: *//')
-    echo -e "${BOLD}${name}${NC} - ${description} [${category}]"
 }
