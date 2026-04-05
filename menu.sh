@@ -26,7 +26,6 @@ REGISTRY=(
     "setup-zsh.sh|环境配置|一键配置 zsh 环境（插件、补全、提示符、别名）|root"
     "setup-ssh.sh|安全|SSH 密钥认证加固（禁用密码登录、更改端口、配置 UFW 防火墙）|root"
     "configure-dns.sh|网络|DNS 解析检测与优化（测试多 DNS 服务器，可切换配置）|root"
-    "configure-nezha.sh|监控|哪吒探针安全加固（禁用自动更新、远程命令执行）|root"
     "check-docker-logs.sh|运维|检查 Docker 日志配置及磁盘空间占用情况|root"
 )
 
