@@ -64,6 +64,7 @@ show_menu() {
 # ---- 下载并执行脚本 ----
 run_script() {
     local script_file="$1"
+    local requires="$2"
     trap 'rm -f /tmp/vpssh-common.sh "/tmp/vpssh-${script_file}"' RETURN
 
     echo -e "\n${CYAN}---> 下载脚本...${NC}"
@@ -76,8 +77,14 @@ run_script() {
         return 1
     fi
 
+    local runner="bash"
+    if [[ "${requires}" == "root" ]] && [[ "$(id -u)" -ne 0 ]]; then
+        echo -e "${YELLOW}此脚本需要 root 权限，将使用 sudo 执行${NC}"
+        runner="sudo bash"
+    fi
+
     echo -e "${CYAN}---> 执行 ${script_file} ...${NC}\n"
-    bash "/tmp/vpssh-${script_file}"
+    ${runner} "/tmp/vpssh-${script_file}"
 }
 
 # ---- 主循环 ----
@@ -93,9 +100,9 @@ main() {
 
         if [[ "${choice}" =~ ^[0-9]+$ ]] && [[ "${choice}" -ge 1 ]] && [[ "${choice}" -le ${#REGISTRY[@]} ]]; then
             local entry="${REGISTRY[$((choice - 1))]}"
-            local file
-            IFS='|' read -r file _ _ _ <<< "${entry}"
-            run_script "${file}"
+            local file requires
+            IFS='|' read -r file _ _ requires <<< "${entry}"
+            run_script "${file}" "${requires}"
 
             echo ""
             read -r -p "$(echo -e "${DIM}按回车返回菜单...${NC}")" _ </dev/tty
