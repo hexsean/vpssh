@@ -71,8 +71,10 @@ test_dns_resolution() {
     local test_domain="www.google-analytics.com"
 
     if ! has_cmd dig; then
-        print_step "安装 dig 工具..."
-        apt update -qq && apt install -y dnsutils > /dev/null 2>&1 || true
+        print_warn "未找到 dig，需要安装 dnsutils 才能测试"
+        if confirm "是否安装 dnsutils？"; then
+            apt update -qq && apt install -y dnsutils > /dev/null 2>&1 || true
+        fi
     fi
 
     if ! has_cmd dig; then

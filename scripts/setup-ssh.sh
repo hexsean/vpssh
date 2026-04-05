@@ -98,7 +98,7 @@ detect_state() {
     # 重启 sshd（如果有配置变更）
     local has_sshd_change=false
     for item in "${PLAN[@]}"; do
-        if [[ "${item}" =~ write_sshd_conf|clean_old_conf|add_include ]]; then
+        if [[ "${item}" =~ (write_sshd_conf|clean_old_conf|add_include) ]]; then
             has_sshd_change=true
             break
         fi

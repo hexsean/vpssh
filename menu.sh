@@ -9,7 +9,7 @@ set -euo pipefail
 
 REPO_RAW="https://raw.githubusercontent.com/hexsean/vpssh/main"
 
-# ---- 内联颜色（入口脚本不依赖 common.sh） ----
+# ---- 内联颜色（自包含，与 lib/common.sh 保持同步） ----
 readonly RED='\033[0;31m'
 readonly GREEN='\033[0;32m'
 readonly YELLOW='\033[0;33m'

@@ -3,7 +3,9 @@
 # @description: 公共颜色、打印、确认、幂等工具函数
 # @category: 库
 # @requires: none
+# @idempotent: true
 
+# NOTE: 颜色常量在 menu.sh 中有副本（menu.sh 需自包含以支持 curl|bash）
 # ---- 颜色 ----
 readonly RED='\033[0;31m'
 readonly GREEN='\033[0;32m'
@@ -84,7 +86,7 @@ write_file_if_changed() {
     local content="$2"
     if file_matches "${file}" "${content}"; then
         print_skip "文件无变化: ${file}"
-        return 1
+        return 0
     fi
     mkdir -p "$(dirname "${file}")"
     echo "${content}" > "${file}"
