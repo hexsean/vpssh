@@ -92,3 +92,29 @@ require_root() {
         exit 1
     fi
 }
+
+# ---- 发行版检测 ----
+
+detect_distro() {
+    if [[ -f /etc/debian_version ]]; then
+        DISTRO="debian"
+    elif [[ -f /etc/redhat-release ]]; then
+        DISTRO="redhat"
+    elif [[ -f /etc/arch-release ]]; then
+        DISTRO="arch"
+    elif [[ -f /etc/alpine-release ]]; then
+        DISTRO="alpine"
+    else
+        print_err "无法识别的 Linux 发行版"
+        exit 1
+    fi
+}
+
+pkg_install() {
+    case "${DISTRO}" in
+        debian)  apt update -y && apt install -y "$@" ;;
+        redhat)  dnf install -y "$@" 2>/dev/null || yum install -y "$@" ;;
+        arch)    pacman -Sy --noconfirm "$@" ;;
+        alpine)  apk update && apk add "$@" ;;
+    esac
+}

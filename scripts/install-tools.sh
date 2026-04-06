@@ -12,22 +12,6 @@ source "${SCRIPT_DIR}/../lib/common.sh" 2>/dev/null || source /tmp/vpssh-common.
 
 require_root
 
-# ---- 检测发行版 ----
-detect_distro() {
-    if [[ -f /etc/debian_version ]]; then
-        DISTRO="debian"
-    elif [[ -f /etc/redhat-release ]]; then
-        DISTRO="redhat"
-    elif [[ -f /etc/arch-release ]]; then
-        DISTRO="arch"
-    elif [[ -f /etc/alpine-release ]]; then
-        DISTRO="alpine"
-    else
-        print_err "无法识别的 Linux 发行版"
-        exit 1
-    fi
-}
-
 # 工具名到包名的映射
 pkg_name_for() {
     local tool="$1"
@@ -104,22 +88,7 @@ execute_plan() {
     fi
 
     print_step "安装: ${PACKAGES_TO_INSTALL[*]}"
-
-    case "${DISTRO}" in
-        debian)
-            apt update -y
-            apt install -y "${PACKAGES_TO_INSTALL[@]}"
-            ;;
-        redhat)
-            dnf install -y "${PACKAGES_TO_INSTALL[@]}" 2>/dev/null || yum install -y "${PACKAGES_TO_INSTALL[@]}"
-            ;;
-        arch)
-            pacman -Sy --noconfirm "${PACKAGES_TO_INSTALL[@]}"
-            ;;
-        alpine)
-            apk update && apk add "${PACKAGES_TO_INSTALL[@]}"
-            ;;
-    esac
+    pkg_install "${PACKAGES_TO_INSTALL[@]}"
 
     # 验证
     print_header "验证安装"
