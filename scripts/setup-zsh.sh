@@ -12,8 +12,12 @@ source "${SCRIPT_DIR}/../lib/common.sh" 2>/dev/null || source /tmp/vpssh-common.
 
 require_root
 
-ZSH_PLUGIN_DIR="${HOME}/.zsh/plugins"
-ZSHRC="${HOME}/.zshrc"
+# 确定目标用户：通过 sudo 执行时使用原始用户，直接 root 执行时使用 root
+TARGET_USER="${SUDO_USER:-$(whoami)}"
+TARGET_HOME="$(getent passwd "${TARGET_USER}" | cut -d: -f6)"
+
+ZSH_PLUGIN_DIR="${TARGET_HOME}/.zsh/plugins"
+ZSHRC="${TARGET_HOME}/.zshrc"
 
 PLUGINS=(
     "zsh-autosuggestions|https://github.com/zsh-users/zsh-autosuggestions"
@@ -53,8 +57,8 @@ detect_state() {
         PLAN+=("install_zsh|安装 zsh 和 git")
     fi
 
-    if ! has_cmd zsh || [[ "$(getent passwd "$(whoami)" | cut -d: -f7)" != "$(which zsh 2>/dev/null)" ]]; then
-        PLAN+=("set_default_shell|设置 zsh 为默认 shell")
+    if ! has_cmd zsh || [[ "$(getent passwd "${TARGET_USER}" | cut -d: -f7)" != "$(which zsh 2>/dev/null)" ]]; then
+        PLAN+=("set_default_shell|设置 zsh 为 ${TARGET_USER} 的默认 shell")
     fi
 
     for entry in "${PLUGINS[@]}"; do
@@ -113,9 +117,9 @@ execute_plan() {
                 print_ok "zsh 和 git 安装完成"
                 ;;
             set_default_shell)
-                print_step "设置 zsh 为默认 shell..."
-                chsh -s "$(which zsh)" "$(whoami)"
-                print_ok "默认 shell 已设为 zsh"
+                print_step "设置 zsh 为 ${TARGET_USER} 的默认 shell..."
+                chsh -s "$(which zsh)" "${TARGET_USER}"
+                print_ok "${TARGET_USER} 的默认 shell 已设为 zsh"
                 ;;
             clone_plugin)
                 local name url
@@ -123,12 +127,15 @@ execute_plan() {
                 url="$(echo "${item}" | cut -d'|' -f4)"
                 print_step "克隆插件 ${name}..."
                 mkdir -p "${ZSH_PLUGIN_DIR}"
+                chown "${TARGET_USER}":"${TARGET_USER}" "${TARGET_HOME}/.zsh" "${ZSH_PLUGIN_DIR}"
                 git clone --depth=1 "${url}" "${ZSH_PLUGIN_DIR}/${name}"
+                chown -R "${TARGET_USER}":"${TARGET_USER}" "${ZSH_PLUGIN_DIR}/${name}"
                 print_ok "插件 ${name} 安装完成"
                 ;;
             write_zshrc)
                 print_step "写入 .zshrc..."
                 write_file_if_changed "${ZSHRC}" "${ZSHRC_CONTENT}"
+                chown "${TARGET_USER}":"${TARGET_USER}" "${ZSHRC}"
                 ;;
         esac
     done

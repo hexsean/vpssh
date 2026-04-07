@@ -12,7 +12,11 @@ source "${SCRIPT_DIR}/../lib/common.sh" 2>/dev/null || source /tmp/vpssh-common.
 
 require_root
 
-TMUX_CONF="${HOME}/.tmux.conf"
+# 确定目标用户：通过 sudo 执行时使用原始用户，直接 root 执行时使用 root
+TARGET_USER="${SUDO_USER:-$(whoami)}"
+TARGET_HOME="$(getent passwd "${TARGET_USER}" | cut -d: -f6)"
+
+TMUX_CONF="${TARGET_HOME}/.tmux.conf"
 
 TMUX_CONF_CONTENT='# ---- 基础设置 ----
 
@@ -117,6 +121,7 @@ execute_plan() {
             write_conf)
                 print_step "写入 .tmux.conf..."
                 write_file_if_changed "${TMUX_CONF}" "${TMUX_CONF_CONTENT}"
+                chown "${TARGET_USER}":"${TARGET_USER}" "${TMUX_CONF}"
                 # 如果当前在 tmux 内，自动加载配置
                 if [[ -n "${TMUX:-}" ]]; then
                     tmux source-file "${TMUX_CONF}" 2>/dev/null && print_ok "配置已热加载" || true
