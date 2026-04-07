@@ -86,6 +86,87 @@ write_file_if_changed() {
     return 0
 }
 
+# ---- 托管块工具 ----
+# 在文件中管理 BEGIN/END 标记包裹的区域，不影响用户手写的其他内容
+
+MANAGED_BEGIN="# ---- BEGIN vpssh managed ----"
+MANAGED_END="# ---- END vpssh managed ----"
+
+has_managed_block_pair() {
+    local file="$1"
+    [[ -f "${file}" ]] || return 1
+    grep -qFx "${MANAGED_BEGIN}" "${file}" && grep -qFx "${MANAGED_END}" "${file}"
+}
+
+has_partial_managed_block() {
+    local file="$1"
+    [[ -f "${file}" ]] || return 1
+
+    local has_begin=1
+    local has_end=1
+
+    grep -qFx "${MANAGED_BEGIN}" "${file}" && has_begin=0
+    grep -qFx "${MANAGED_END}" "${file}" && has_end=0
+
+    [[ "${has_begin}" -ne "${has_end}" ]]
+}
+
+managed_block_matches() {
+    local file="$1"
+    local content="$2"
+
+    has_managed_block_pair "${file}" || return 1
+
+    local current
+    current="$(awk -v begin="${MANAGED_BEGIN}" -v end="${MANAGED_END}" '
+        $0 == begin { in_block=1 }
+        in_block { print }
+        in_block && $0 == end { exit }
+    ' "${file}" 2>/dev/null)"
+    local expected
+    expected="$(printf '%s\n%s\n%s' "${MANAGED_BEGIN}" "${content}" "${MANAGED_END}")"
+    [[ "${current}" == "${expected}" ]]
+}
+
+write_managed_block() {
+    local file="$1"
+    local content="$2"
+    local block
+    block="$(printf '%s\n%s\n%s' "${MANAGED_BEGIN}" "${content}" "${MANAGED_END}")"
+
+    if [[ ! -f "${file}" ]]; then
+        mkdir -p "$(dirname "${file}")"
+        echo "${block}" > "${file}"
+        print_ok "已创建: ${file}"
+    elif has_managed_block_pair "${file}"; then
+        # 替换已有的托管块
+        local tmp="${file}.vpssh.tmp"
+        awk -v begin="${MANAGED_BEGIN}" -v end="${MANAGED_END}" -v block="${block}" '
+            $0 == begin { print block; skip=1; next }
+            skip && $0 == end { skip=0; next }
+            !skip { print }
+        ' "${file}" > "${tmp}"
+        mv "${tmp}" "${file}"
+        print_ok "已更新托管块: ${file}"
+    elif has_partial_managed_block "${file}"; then
+        print_err "检测到不完整的托管块，拒绝自动修改: ${file}"
+        return 1
+    else
+        # 文件存在但没有托管块，追加到末尾，尽量不改变用户现有加载顺序
+        local tmp="${file}.vpssh.tmp"
+        cat "${file}" > "${tmp}"
+        if [[ -s "${file}" ]]; then
+            if [[ -n "$(tail -c 1 "${file}" 2>/dev/null)" ]]; then
+                printf '\n' >> "${tmp}"
+            fi
+            printf '\n' >> "${tmp}"
+        fi
+        printf '%s\n' "${block}" >> "${tmp}"
+        mv "${tmp}" "${file}"
+        print_ok "已追加托管块: ${file}"
+    fi
+}
+
 require_root() {
     if [[ "$(id -u)" -ne 0 ]]; then
         print_err "此脚本需要 root 权限，请使用 sudo 运行"

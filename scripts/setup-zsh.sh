@@ -25,8 +25,15 @@ PLUGINS=(
     "zsh-z|https://github.com/agkozak/zsh-z"
 )
 
-ZSHRC_CONTENT='# ---- PATH（继承 ~/.profile 中的环境变量，如 nvm、npm、cargo 等） ----
+ZSHRC_CONTENT='# ---- PATH ----
 [[ -f ~/.profile ]] && emulate sh -c '\''source ~/.profile'\''
+
+# .bashrc 中的工具初始化被 BASH_VERSION 门控，zsh 拿不到，这里直接加载
+export NVM_DIR="$HOME/.nvm"
+[[ -s "$NVM_DIR/nvm.sh" ]] && source "$NVM_DIR/nvm.sh"
+[[ -f "$HOME/.cargo/env" ]] && source "$HOME/.cargo/env"
+[[ -d "$HOME/go/bin" && ":$PATH:" != *":$HOME/go/bin:"* ]] && export PATH="$HOME/go/bin:$PATH"
+[[ -d "/usr/local/go/bin" && ":$PATH:" != *":/usr/local/go/bin:"* ]] && export PATH="/usr/local/go/bin:$PATH"
 
 # ---- History ----
 HISTFILE=~/.zsh_history
@@ -41,39 +48,56 @@ zstyle '\'':completion:*'\'' menu select
 zstyle '\'':completion:*'\'' matcher-list '\''m:{a-z}={A-Z}'\''
 
 # ---- Plugins ----
-source ~/.zsh/plugins/zsh-autosuggestions/zsh-autosuggestions.zsh
-source ~/.zsh/plugins/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh
-source ~/.zsh/plugins/zsh-z/zsh-z.plugin.zsh
+[[ -r ~/.zsh/plugins/zsh-autosuggestions/zsh-autosuggestions.zsh ]] && source ~/.zsh/plugins/zsh-autosuggestions/zsh-autosuggestions.zsh
+[[ -r ~/.zsh/plugins/zsh-z/zsh-z.plugin.zsh ]] && source ~/.zsh/plugins/zsh-z/zsh-z.plugin.zsh
 
 # ---- Prompt ----
 PROMPT='\''%F{cyan}%n@%m%f:%F{green}%~%f %# '\''
 
 # ---- Aliases ----
 alias ll='\''ls -alF'\''
-alias la='\''ls -A'\'''
+alias la='\''ls -A'\''
+
+# syntax-highlighting 必须在 .zshrc 末尾加载
+[[ -r ~/.zsh/plugins/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh ]] && source ~/.zsh/plugins/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh'
 
 # ---- 检测阶段 ----
 detect_state() {
     PLAN=()
+    PACKAGES_TO_INSTALL=()
+    local zsh_path=""
+    local missing_plugins=0
 
     if ! has_cmd zsh; then
-        PLAN+=("install_zsh|安装 zsh 和 git")
-    fi
-
-    if ! has_cmd zsh || [[ "$(getent passwd "${TARGET_USER}" | cut -d: -f7)" != "$(which zsh 2>/dev/null)" ]]; then
-        PLAN+=("set_default_shell|设置 zsh 为 ${TARGET_USER} 的默认 shell")
+        PACKAGES_TO_INSTALL+=("zsh")
+    else
+        zsh_path="$(command -v zsh)"
     fi
 
     for entry in "${PLUGINS[@]}"; do
         local name="${entry%%|*}"
         local url="${entry##*|}"
         if [[ ! -d "${ZSH_PLUGIN_DIR}/${name}" ]]; then
+            missing_plugins=1
             PLAN+=("clone_plugin|安装插件: ${name}|${name}|${url}")
         fi
     done
 
-    if ! file_matches "${ZSHRC}" "${ZSHRC_CONTENT}"; then
-        PLAN+=("write_zshrc|写入 .zshrc 配置")
+    if [[ "${missing_plugins}" -eq 1 ]] && ! has_cmd git; then
+        PACKAGES_TO_INSTALL+=("git")
+    fi
+
+    if [[ ${#PACKAGES_TO_INSTALL[@]} -gt 0 ]]; then
+        detect_distro
+        PLAN=("install_packages|安装缺失依赖: ${PACKAGES_TO_INSTALL[*]}" "${PLAN[@]}")
+    fi
+
+    if ! has_cmd zsh || [[ "$(getent passwd "${TARGET_USER}" | cut -d: -f7)" != "${zsh_path:-$(command -v zsh 2>/dev/null)}" ]]; then
+        PLAN+=("set_default_shell|设置 zsh 为 ${TARGET_USER} 的默认 shell")
+    fi
+
+    if ! managed_block_matches "${ZSHRC}" "${ZSHRC_CONTENT}"; then
+        PLAN+=("write_zshrc|写入 .zshrc 托管配置块")
     fi
 }
 
@@ -96,14 +120,17 @@ show_plan() {
     if has_cmd zsh; then
         print_plan_skip "zsh 已安装"
     fi
+    if has_cmd git; then
+        print_plan_skip "git 已安装"
+    fi
     for entry in "${PLUGINS[@]}"; do
         local name="${entry%%|*}"
         if [[ -d "${ZSH_PLUGIN_DIR}/${name}" ]]; then
             print_plan_skip "插件 ${name}"
         fi
     done
-    if file_matches "${ZSHRC}" "${ZSHRC_CONTENT}"; then
-        print_plan_skip ".zshrc 内容一致"
+    if managed_block_matches "${ZSHRC}" "${ZSHRC_CONTENT}"; then
+        print_plan_skip ".zshrc 托管块一致"
     fi
 }
 
@@ -114,14 +141,14 @@ execute_plan() {
         action="$(echo "${item}" | cut -d'|' -f1)"
 
         case "${action}" in
-            install_zsh)
-                print_step "更新 apt 并安装 zsh、git..."
-                apt update -y && apt install -y zsh git
-                print_ok "zsh 和 git 安装完成"
+            install_packages)
+                print_step "安装缺失依赖: ${PACKAGES_TO_INSTALL[*]}..."
+                pkg_install "${PACKAGES_TO_INSTALL[@]}"
+                print_ok "依赖安装完成: ${PACKAGES_TO_INSTALL[*]}"
                 ;;
             set_default_shell)
                 print_step "设置 zsh 为 ${TARGET_USER} 的默认 shell..."
-                chsh -s "$(which zsh)" "${TARGET_USER}"
+                chsh -s "$(command -v zsh)" "${TARGET_USER}"
                 print_ok "${TARGET_USER} 的默认 shell 已设为 zsh"
                 ;;
             clone_plugin)
@@ -136,8 +163,8 @@ execute_plan() {
                 print_ok "插件 ${name} 安装完成"
                 ;;
             write_zshrc)
-                print_step "写入 .zshrc..."
-                write_file_if_changed "${ZSHRC}" "${ZSHRC_CONTENT}"
+                print_step "写入 .zshrc 托管块..."
+                write_managed_block "${ZSHRC}" "${ZSHRC_CONTENT}"
                 chown "${TARGET_USER}":"${TARGET_USER}" "${ZSHRC}"
                 ;;
         esac
