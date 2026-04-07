@@ -25,7 +25,10 @@ PLUGINS=(
     "zsh-z|https://github.com/agkozak/zsh-z"
 )
 
-ZSHRC_CONTENT='# ---- History ----
+ZSHRC_CONTENT='# ---- PATH（继承 ~/.profile 中的环境变量，如 nvm、npm、cargo 等） ----
+[[ -f ~/.profile ]] && emulate sh -c '\''source ~/.profile'\''
+
+# ---- History ----
 HISTFILE=~/.zsh_history
 HISTSIZE=10000
 SAVEHIST=10000
